@@ -1,0 +1,149 @@
+graph TB
+    subgraph Clients["Client Layer"]
+        REST["REST API"]
+        GQL["GraphQL"]
+        WH["Webhooks"]
+        SDK["SDKs (Node/Python/Go)"]
+    end
+
+    subgraph Gateway["API Gateway (Kong)"]
+        AUTH["Auth (API Keys)"]
+        RL["Rate Limiter"]
+        ROUTE["Router"]
+    end
+
+    subgraph API["API Service Layer"]
+        CREATOR_API["Creator API"]
+        POST_API["Post API"]
+        ANALYTICS_API["Analytics API"]
+        TRACKING_API["Tracking API"]
+    end
+
+    subgraph Cache["Cache Layer"]
+        REDIS["Redis Cluster<br/>(Hot: 24h TTL)"]
+    end
+
+    subgraph Storage["Storage Layer"]
+        PG["PostgreSQL + TimescaleDB<br/>(Warm: 90 days)"]
+        ES["Elasticsearch<br/>(Search: 30 days)"]
+        S3["S3 + Parquet<br/>(Cold: Historical)"]
+    end
+
+    subgraph Processing["Data Processing Layer"]
+        NORM["Normalizer"]
+        DEDUP["Deduplicator"]
+        ENRICH["Enrichment"]
+    end
+
+    subgraph Streaming["Event Streaming"]
+        KAFKA["Redpanda / Kafka"]
+        RAW_T["Topics: raw.*"]
+        NORM_T["Topics: normalized.*"]
+        EVENT_T["Topics: events.*"]
+    end
+
+    subgraph Ingestion["Data Ingestion Layer"]
+        TEMPORAL["Temporal<br/>(Job Orchestration)"]
+        IG_COL["Instagram Collector"]
+        TT_COL["TikTok Collector"]
+        YT_COL["YouTube Collector"]
+    end
+
+    subgraph Proxy["Proxy Infrastructure"]
+        PM["Proxy Manager"]
+        RES["Residential Pool<br/>(BrightData 10K+ IPs)"]
+        DC["Datacenter Pool<br/>(500 IPs)"]
+        ROUTER["Smart Router<br/>Health Scoring + Cooldown"]
+    end
+
+    subgraph Webhooks["Webhook Delivery"]
+        DISPATCH["Dispatcher"]
+        RETRY["Retry Queue"]
+    end
+
+    subgraph Monitoring["Observability"]
+        GRAF["Grafana"]
+        PROM["Prometheus"]
+        LOKI["Loki (Logs)"]
+        ALERT["Alertmanager"]
+    end
+
+    %% Client to Gateway
+    REST --> AUTH
+    GQL --> AUTH
+    SDK --> AUTH
+    AUTH --> RL --> ROUTE
+
+    %% Gateway to API
+    ROUTE --> CREATOR_API
+    ROUTE --> POST_API
+    ROUTE --> ANALYTICS_API
+    ROUTE --> TRACKING_API
+
+    %% API to data
+    CREATOR_API --> REDIS
+    POST_API --> REDIS
+    REDIS --> PG
+    ANALYTICS_API --> PG
+    ANALYTICS_API --> ES
+    PG --> S3
+
+    %% Ingestion flow
+    TEMPORAL --> IG_COL
+    TEMPORAL --> TT_COL
+    TEMPORAL --> YT_COL
+    IG_COL --> PM
+    TT_COL --> PM
+    YT_COL --> PM
+    PM --> ROUTER
+    ROUTER --> RES
+    ROUTER --> DC
+
+    %% Data flow
+    IG_COL --> RAW_T
+    TT_COL --> RAW_T
+    YT_COL --> RAW_T
+    RAW_T --> KAFKA
+    KAFKA --> NORM
+    NORM --> DEDUP --> ENRICH
+    ENRICH --> NORM_T
+    NORM_T --> PG
+    NORM_T --> REDIS
+    NORM_T --> ES
+
+    %% Events
+    ENRICH --> EVENT_T
+    EVENT_T --> DISPATCH
+    DISPATCH --> RETRY
+    DISPATCH --> WH
+
+    %% Monitoring
+    API --> PROM
+    Ingestion --> PROM
+    Processing --> PROM
+    PROM --> GRAF
+    LOKI --> GRAF
+    PROM --> ALERT
+
+    %% Styling
+    classDef client fill:#e1f5fe,stroke:#01579b
+    classDef gateway fill:#fff3e0,stroke:#e65100
+    classDef api fill:#e8f5e9,stroke:#1b5e20
+    classDef cache fill:#fce4ec,stroke:#880e4f
+    classDef storage fill:#f3e5f5,stroke:#4a148c
+    classDef processing fill:#fff8e1,stroke:#f57f17
+    classDef streaming fill:#e0f2f1,stroke:#004d40
+    classDef ingestion fill:#fbe9e7,stroke:#bf360c
+    classDef proxy fill:#efebe9,stroke:#3e2723
+    classDef monitor fill:#e8eaf6,stroke:#1a237e
+
+    class REST,GQL,WH,SDK client
+    class AUTH,RL,ROUTE gateway
+    class CREATOR_API,POST_API,ANALYTICS_API,TRACKING_API api
+    class REDIS cache
+    class PG,ES,S3 storage
+    class NORM,DEDUP,ENRICH processing
+    class KAFKA,RAW_T,NORM_T,EVENT_T streaming
+    class TEMPORAL,IG_COL,TT_COL,YT_COL ingestion
+    class PM,RES,DC,ROUTER proxy
+    class GRAF,PROM,LOKI,ALERT monitor

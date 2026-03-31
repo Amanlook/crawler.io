@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crawler.io — API Documentation</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-card: #161922;
+    --bg-sidebar: #111318;
+    --bg-code: #1a1d27;
+    --bg-input: #1e2130;
+    --border: #2a2d3a;
+    --text: #e1e4eb;
+    --text-dim: #8b8fa3;
+    --text-muted: #5c6070;
+    --accent: #6c63ff;
+    --accent-hover: #7f78ff;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,.12);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59,130,246,.12);
+    --orange: #f59e0b;
+    --orange-bg: rgba(245,158,11,.12);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,.12);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,.12);
+    --get: #22c55e;
+    --post: #3b82f6;
+    --put: #f59e0b;
+    --delete: #ef4444;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14px; line-height: 1.6; }
+
+  /* ─── Sidebar ─── */
+  .sidebar {
+    width: 280px; min-width: 280px; background: var(--bg-sidebar);
+    border-right: 1px solid var(--border); padding: 0;
+    position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100;
+  }
+  .sidebar-header {
+    padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg-sidebar); z-index: 1;
+  }
+  .sidebar-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+  .sidebar-header h1 span { color: var(--accent); }
+  .sidebar-header p { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .sidebar-nav { padding: 12px 0; }
+  .nav-section { padding: 0 12px; margin-bottom: 4px; }
+  .nav-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); padding: 8px 8px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+    color: var(--text-dim); text-decoration: none; font-size: 13px; cursor: pointer;
+    transition: all .15s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.05); color: var(--text); }
+  .nav-item.active { background: rgba(108,99,255,.12); color: var(--accent); }
+  .method-badge {
+    font-size: 9px; font-weight: 700; font-family: var(--mono); padding: 1px 5px; border-radius: 3px;
+    min-width: 36px; text-align: center; text-transform: uppercase;
+  }
+  .method-badge.get { background: var(--green-bg); color: var(--get); }
+  .method-badge.post { background: var(--blue-bg); color: var(--post); }
+  .method-badge.put { background: var(--orange-bg); color: var(--put); }
+  .method-badge.delete { background: var(--red-bg); color: var(--delete); }
+
+  /* ─── Main content ─── */
+  .main { margin-left: 280px; flex: 1; min-width: 0; }
+  .top-bar {
+    position: sticky; top: 0; z-index: 50; background: rgba(15,17,23,.85);
+    backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+    padding: 12px 32px; display: flex; align-items: center; gap: 12px;
+  }
+  .api-key-input {
+    flex: 1; max-width: 480px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 12px; color: var(--text); font-family: var(--mono);
+    font-size: 12px; outline: none; transition: border-color .2s;
+  }
+  .api-key-input:focus { border-color: var(--accent); }
+  .api-key-input::placeholder { color: var(--text-muted); }
+  .btn {
+    padding: 8px 16px; border-radius: var(--radius); border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; transition: all .15s; font-family: var(--font);
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: rgba(255,255,255,.06); color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: rgba(255,255,255,.1); color: var(--text); }
+  .auth-status { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .auth-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .auth-dot.ok { background: var(--green); }
+  .auth-dot.no { background: var(--red); }
+
+  .content { max-width: 960px; margin: 0 auto; padding: 32px; }
+
+  /* ─── Sections ─── */
+  .section { margin-bottom: 48px; scroll-margin-top: 80px; }
+  .section h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.02em; }
+  .section h3 { font-size: 16px; font-weight: 600; margin-top: 24px; margin-bottom: 8px; }
+  .section p { color: var(--text-dim); margin-bottom: 12px; line-height: 1.7; }
+  .section ul { padding-left: 20px; color: var(--text-dim); margin-bottom: 12px; }
+  .section li { margin-bottom: 4px; }
+  .section code { font-family: var(--mono); font-size: 12px; background: var(--bg-code); padding: 2px 6px; border-radius: 4px; color: var(--purple); }
+
+  /* ─── Endpoint cards ─── */
+  .endpoint {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    margin-bottom: 16px; overflow: hidden; scroll-margin-top: 80px;
+  }
+  .endpoint-header {
+    padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; user-select: none; transition: background .15s;
+  }
+  .endpoint-header:hover { background: rgba(255,255,255,.02); }
+  .endpoint-method {
+    font-size: 11px; font-weight: 700; font-family: var(--mono); padding: 3px 8px;
+    border-radius: 4px; min-width: 48px; text-align: center;
+  }
+  .endpoint-method.get { background: var(--green-bg); color: var(--get); }
+  .endpoint-method.post { background: var(--blue-bg); color: var(--post); }
+  .endpoint-method.delete { background: var(--red-bg); color: var(--delete); }
+  .endpoint-path { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+  .endpoint-desc { color: var(--text-dim); font-size: 13px; margin-left: auto; }
+  .endpoint-chevron { color: var(--text-muted); transition: transform .2s; font-size: 12px; }
+  .endpoint.open .endpoint-chevron { transform: rotate(90deg); }
+  .endpoint-body { display: none; border-top: 1px solid var(--border); }
+  .endpoint.open .endpoint-body { display: block; }
+  .endpoint-content { padding: 20px; }
+
+  /* ─── Params table ─── */
+  .params-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .params-table th {
+    text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border);
+  }
+  .params-table td { padding: 8px 0; border-bottom: 1px solid rgba(42,45,58,.5); font-size: 13px; vertical-align: top; }
+  .params-table td:first-child { font-family: var(--mono); font-size: 12px; color: var(--accent); width: 160px; }
+  .params-table td:nth-child(2) { color: var(--text-muted); font-size: 12px; width: 80px; }
+  .param-required { color: var(--red); font-size: 10px; font-weight: 600; }
+
+  /* ─── Code blocks ─── */
+  .code-block {
+    background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin: 12px 0; overflow-x: auto; position: relative;
+  }
+  .code-block pre { font-family: var(--mono); font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+  .code-block .copy-btn {
+    position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,.08);
+    border: none; color: var(--text-dim); padding: 4px 8px; border-radius: 4px;
+    font-size: 11px; cursor: pointer; opacity: 0; transition: opacity .2s;
+  }
+  .code-block:hover .copy-btn { opacity: 1; }
+  .code-block .copy-btn:hover { background: rgba(255,255,255,.15); color: var(--text); }
+
+  /* ─── Try it panel ─── */
+  .try-it { margin-top: 16px; }
+  .try-it-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .try-it-header h4 { font-size: 13px; font-weight: 600; }
+  .param-inputs { display: grid; gap: 8px; margin-bottom: 12px; }
+  .param-row { display: flex; gap: 8px; align-items: center; }
+  .param-row label { font-family: var(--mono); font-size: 12px; color: var(--text-dim); min-width: 140px; }
+  .param-row input {
+    flex: 1; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none;
+  }
+  .param-row input:focus { border-color: var(--accent); }
+  .response-panel {
+    margin-top: 12px; background: var(--bg-code); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .response-header {
+    padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex;
+    align-items: center; gap: 8px; font-size: 12px;
+  }
+  .response-status { font-weight: 700; font-family: var(--mono); }
+  .response-status.s2xx { color: var(--green); }
+  .response-status.s4xx { color: var(--orange); }
+  .response-status.s5xx { color: var(--red); }
+  .response-time { color: var(--text-muted); }
+  .response-body { padding: 12px; max-height: 400px; overflow: auto; }
+  .response-body pre { font-family: var(--mono); font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
+  .json-key { color: #7dd3fc; }
+  .json-str { color: #86efac; }
+  .json-num { color: #fbbf24; }
+  .json-bool { color: #c084fc; }
+  .json-null { color: var(--text-muted); }
+
+  /* ─── Rate limit table ─── */
+  .info-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .info-table th, .info-table td { padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  .info-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); background: var(--bg-code); }
+  .info-table td { font-size: 13px; }
+  .info-table tr:last-child td { border-bottom: none; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Loading spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ─── Sidebar ─── -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Crawler<span>.io</span></h1>
+    <p>API Documentation v1.0</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Getting Started</div>
+      <a class="nav-item" href="#overview">Overview</a>
+      <a class="nav-item" href="#authentication">Authentication</a>
+      <a class="nav-item" href="#rate-limits">Rate Limits</a>
+      <a class="nav-item" href="#pagination">Pagination</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Creators</div>
+      <a class="nav-item" href="#lookup-creator"><span class="method-badge get">GET</span> Lookup Creator</a>
+      <a class="nav-item" href="#get-creator"><span class="method-badge get">GET</span> Get Creator</a>
+      <a class="nav-item" href="#search-creators"><span class="method-badge get">GET</span> Search Creators</a>
+      <a class="nav-item" href="#get-creator-posts"><span class="method-badge get">GET</span> Creator Posts</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Posts</div>
+      <a class="nav-item" href="#search-posts"><span class="method-badge get">GET</span> Search Posts</a>
+      <a class="nav-item" href="#get-post"><span class="method-badge get">GET</span> Get Post</a>
+      <a class="nav-item" href="#post-metrics"><span class="method-badge get">GET</span> Post Metrics</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Tracking</div>
+      <a class="nav-item" href="#track-creator"><span class="method-badge post">POST</span> Track Creator</a>
+      <a class="nav-item" href="#untrack-creator"><span class="method-badge delete">DEL</span> Untrack Creator</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Webhooks</div>
+      <a class="nav-item" href="#create-webhook"><span class="method-badge post">POST</span> Create Webhook</a>
+      <a class="nav-item" href="#delete-webhook"><span class="method-badge delete">DEL</span> Delete Webhook</a>
+    </div>
+  </nav>
+</aside>
+
+<!-- ─── Main ─── -->
+<div class="main">
+  <div class="top-bar">
+    <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">API Key</span>
+    <input class="api-key-input" id="apiKeyInput" type="password" placeholder="sk_test_smoke_test_key_for_local_dev" spellcheck="false">
+    <button class="btn btn-secondary" onclick="toggleKeyVisibility()" id="toggleKeyBtn">Show</button>
+    <button class="btn btn-primary" onclick="testAuth()">Verify</button>
+    <div class="auth-status" id="authStatus">
+      <span class="auth-dot no"></span>
+      <span style="color:var(--text-muted)">Not verified</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ─── Overview ─── -->
+    <div class="section" id="overview">
+      <h2>Overview</h2>
+      <p>Crawler.io provides a unified REST API to fetch creator profiles, posts, and engagement metrics from <strong>Instagram</strong>, <strong>TikTok</strong>, and <strong>YouTube</strong> through a single normalized interface.</p>
+      <p>Base URL: <code id="baseUrl">http://localhost:8000</code></p>
+      <h3>Quick Start</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><span style="color:var(--text-muted)"># 1. Look up a creator</span>
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/creators/lookup?platform=instagram&username=virat.kohli"
+
+<span style="color:var(--text-muted)"># 2. Get their posts</span>
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/creators/{creator_id}/posts?limit=20"
+
+<span style="color:var(--text-muted)"># 3. Search posts with filters</span>
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/posts/search?platform=instagram&min_likes=1000000"</pre>
+      </div>
+    </div>
+
+    <!-- ─── Authentication ─── -->
+    <div class="section" id="authentication">
+      <h2>Authentication</h2>
+      <p>All API requests require a Bearer token in the <code>Authorization</code> header:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>Authorization: Bearer sk_test_smoke_test_key_for_local_dev</pre>
+      </div>
+      <p>Enter your API key in the bar above to test endpoints directly from this page. For local development, use:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>sk_test_smoke_test_key_for_local_dev</pre>
+      </div>
+    </div>
+
+    <!-- ─── Rate Limits ─── -->
+    <div class="section" id="rate-limits">
+      <h2>Rate Limits</h2>
+      <p>Rate limits are applied per API key. Limits are returned in response headers.</p>
+      <table class="info-table">
+        <thead><tr><th>Tier</th><th>Requests / min</th><th>Daily Limit</th></tr></thead>
+        <tbody>
+          <tr><td>Free</td><td>10</td><td>100</td></tr>
+          <tr><td>Starter</td><td>100</td><td>10,000</td></tr>
+          <tr><td><strong>Pro</strong></td><td>500</td><td>100,000</td></tr>
+          <tr><td>Enterprise</td><td>2,000</td><td>1,000,000</td></tr>
+        </tbody>
+      </table>
+      <p>Response headers include: <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>, <code>X-RateLimit-Reset</code></p>
+    </div>
+
+    <!-- ─── Pagination ─── -->
+    <div class="section" id="pagination">
+      <h2>Pagination</h2>
+      <p>List endpoints return a <code>pagination</code> object with cursor-based pagination:</p>
+      <div class="code-block">
+        <pre>{
+  "data": [...],
+  "pagination": {
+    "has_more": true,
+    "next_cursor": "cG9fZ2QzMnk5NDc4...",
+    "total_count": 1040
+  }
+}</pre>
+      </div>
+      <p>To get the next page, pass <code>cursor</code> as a query parameter:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>GET /v1/creators/{creator_id}/posts?cursor=cG9fZ2QzMnk5NDc4...&limit=20</pre>
+      </div>
+      <p>Continue until <code>has_more</code> is <code>false</code>.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  CREATORS                                   -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="section" id="creators-section">
+      <h2>Creators</h2>
+      <p>Lookup, search, and retrieve creator profiles with follower counts, bios, and engagement metrics.</p>
+
+      <!-- Lookup Creator -->
+      <div class="endpoint" id="lookup-creator">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/creators/lookup</span>
+          <span class="endpoint-desc">Look up a creator by platform &amp; username</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Returns the full creator profile. If the creator is not yet indexed, returns <code>202 Accepted</code> and triggers async collection — retry after 10-30 seconds.</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>platform <span class="param-required">required</span></td><td>string</td><td>Platform: <code>instagram</code>, <code>tiktok</code>, or <code>youtube</code></td></tr>
+                <tr><td>username <span class="param-required">required</span></td><td>string</td><td>Creator username (without @)</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/creators/lookup?platform=instagram&username=virat.kohli"</pre>
+            </div>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>platform</label><input data-param="platform" value="instagram"></div>
+                <div class="param-row"><label>username</label><input data-param="username" value="virat.kohli"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/creators/lookup')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Get Creator -->
+      <div class="endpoint" id="get-creator">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/creators/{creator_id}</span>
+          <span class="endpoint-desc">Get a creator by ID</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Retrieve a creator's full profile by their internal Crawler.io ID.</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>creator_id <span class="param-required">required</span></td><td>path</td><td>Creator ID (e.g. <code>cr_qnvo4urvptsa1cn4</code>)</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/creators/cr_qnvo4urvptsa1cn4"</pre>
+            </div>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>creator_id</label><input data-param="creator_id" data-path="true" value="cr_qnvo4urvptsa1cn4"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/creators/{creator_id}')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Creators -->
+      <div class="endpoint" id="search-creators">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/creators/search</span>
+          <span class="endpoint-desc">Search creators with filters</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Search creators by name, platform, follower range, or verification status.</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>q</td><td>string</td><td>Search query (matches username, display name, bio)</td></tr>
+                <tr><td>platform</td><td>string</td><td><code>instagram</code>, <code>tiktok</code>, <code>youtube</code></td></tr>
+                <tr><td>min_followers</td><td>integer</td><td>Minimum follower count</td></tr>
+                <tr><td>max_followers</td><td>integer</td><td>Maximum follower count</td></tr>
+                <tr><td>verified</td><td>boolean</td><td>Filter verified accounts only</td></tr>
+                <tr><td>limit</td><td>integer</td><td>Results per page (1-100, default 20)</td></tr>
+                <tr><td>cursor</td><td>string</td><td>Pagination cursor</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/creators/search?platform=instagram&verified=true&min_followers=1000000"</pre>
+            </div>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>q</label><input data-param="q" placeholder="search term"></div>
+                <div class="param-row"><label>platform</label><input data-param="platform" value="instagram"></div>
+                <div class="param-row"><label>min_followers</label><input data-param="min_followers" placeholder="e.g. 1000000"></div>
+                <div class="param-row"><label>verified</label><input data-param="verified" placeholder="true / false"></div>
+                <div class="param-row"><label>limit</label><input data-param="limit" value="20"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/creators/search')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Creator Posts -->
+      <div class="endpoint" id="get-creator-posts">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/creators/{creator_id}/posts</span>
+          <span class="endpoint-desc">Get all posts by a creator</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Returns paginated posts for a creator in Phyllo-compatible format with <code>work_platform</code>, <code>engagement</code>, <code>profile</code>, and <code>media_url</code> fields.</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>creator_id <span class="param-required">required</span></td><td>path</td><td>Creator ID</td></tr>
+                <tr><td>type</td><td>string</td><td>Filter: <code>image</code>, <code>video</code>, <code>reel</code>, <code>carousel</code>, <code>story</code></td></tr>
+                <tr><td>sort</td><td>string</td><td><code>-published_at</code> (default), <code>published_at</code>, <code>-like_count</code>, <code>-view_count</code></td></tr>
+                <tr><td>published_after</td><td>string</td><td>ISO date filter (e.g. <code>2026-01-01</code>)</td></tr>
+                <tr><td>published_before</td><td>string</td><td>ISO date filter</td></tr>
+                <tr><td>limit</td><td>integer</td><td>Results per page (1-100, default 20)</td></tr>
+                <tr><td>cursor</td><td>string</td><td>Pagination cursor from <code>pagination.next_cursor</code></td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/creators/cr_qnvo4urvptsa1cn4/posts?limit=20&sort=-like_count"</pre>
+            </div>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>creator_id</label><input data-param="creator_id" data-path="true" value="cr_qnvo4urvptsa1cn4"></div>
+                <div class="param-row"><label>type</label><input data-param="type" placeholder="image, reel, video..."></div>
+                <div class="param-row"><label>sort</label><input data-param="sort" value="-published_at"></div>
+                <div class="param-row"><label>limit</label><input data-param="limit" value="5"></div>
+                <div class="param-row"><label>cursor</label><input data-param="cursor" placeholder="from pagination.next_cursor"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/creators/{creator_id}/posts')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  POSTS                                      -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="section" id="posts-section">
+      <h2>Posts</h2>
+      <p>Search, retrieve, and analyze posts with engagement data across all platforms.</p>
+
+      <!-- Search Posts -->
+      <div class="endpoint" id="search-posts">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/posts/search</span>
+          <span class="endpoint-desc">Search posts with powerful filters</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Search posts across all creators. Combine filters for platform, likes, views, text, hashtags, type, and date range.</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>q</td><td>string</td><td>Search text in captions</td></tr>
+                <tr><td>hashtag</td><td>string</td><td>Filter by hashtag (without #)</td></tr>
+                <tr><td>platform</td><td>string</td><td><code>instagram</code>, <code>tiktok</code>, <code>youtube</code> (comma-separated)</td></tr>
+                <tr><td>min_likes</td><td>integer</td><td>Minimum like count</td></tr>
+                <tr><td>min_views</td><td>integer</td><td>Minimum view count</td></tr>
+                <tr><td>type</td><td>string</td><td><code>image</code>, <code>video</code>, <code>reel</code>, <code>carousel</code></td></tr>
+                <tr><td>published_after</td><td>string</td><td>ISO date (e.g. <code>2026-01-01</code>)</td></tr>
+                <tr><td>published_before</td><td>string</td><td>ISO date</td></tr>
+                <tr><td>sort</td><td>string</td><td><code>-published_at</code>, <code>-like_count</code>, <code>-view_count</code></td></tr>
+                <tr><td>limit</td><td>integer</td><td>1-100 (default 20)</td></tr>
+                <tr><td>cursor</td><td>string</td><td>Pagination cursor</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/posts/search?platform=instagram&min_likes=5000000&sort=-like_count&limit=5"</pre>
+            </div>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>q</label><input data-param="q" placeholder="search text"></div>
+                <div class="param-row"><label>platform</label><input data-param="platform" value="instagram"></div>
+                <div class="param-row"><label>min_likes</label><input data-param="min_likes" placeholder="e.g. 1000000"></div>
+                <div class="param-row"><label>type</label><input data-param="type" placeholder="image, reel, video..."></div>
+                <div class="param-row"><label>sort</label><input data-param="sort" value="-published_at"></div>
+                <div class="param-row"><label>limit</label><input data-param="limit" value="5"></div>
+                <div class="param-row"><label>cursor</label><input data-param="cursor" placeholder="pagination cursor"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/posts/search')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Get Post -->
+      <div class="endpoint" id="get-post">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/posts/{post_id}</span>
+          <span class="endpoint-desc">Get a single post by ID</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Returns full post details including engagement metrics, media URLs, and creator profile.</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>post_id <span class="param-required">required</span></td><td>path</td><td>Post ID (e.g. <code>po_2kia9af79kjhs878</code>)</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/posts/po_2kia9af79kjhs878"</pre>
+            </div>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>post_id</label><input data-param="post_id" data-path="true" value="po_2kia9af79kjhs878"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/posts/{post_id}')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Post Metrics -->
+      <div class="endpoint" id="post-metrics">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method get">GET</span>
+          <span class="endpoint-path">/v1/posts/{post_id}/metrics</span>
+          <span class="endpoint-desc">Get historical metrics for a post</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Returns time-series engagement metrics (likes, views, comments over time).</p>
+            <h4>Parameters</h4>
+            <table class="params-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>post_id <span class="param-required">required</span></td><td>path</td><td>Post ID</td></tr>
+                <tr><td>interval</td><td>string</td><td><code>5m</code>, <code>15m</code>, <code>hourly</code> (default), <code>daily</code></td></tr>
+                <tr><td>start_date</td><td>string</td><td>ISO date</td></tr>
+                <tr><td>end_date</td><td>string</td><td>ISO date</td></tr>
+              </tbody>
+            </table>
+            <div class="try-it">
+              <div class="try-it-header"><h4>Try it</h4></div>
+              <div class="param-inputs">
+                <div class="param-row"><label>post_id</label><input data-param="post_id" data-path="true" value="po_2kia9af79kjhs878"></div>
+                <div class="param-row"><label>interval</label><input data-param="interval" value="hourly"></div>
+              </div>
+              <button class="btn btn-primary" onclick="sendRequest(this, 'GET', '/v1/posts/{post_id}/metrics')">Send Request</button>
+              <div class="response-panel" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  TRACKING                                   -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="section" id="tracking-section">
+      <h2>Tracking</h2>
+      <p>Subscribe to automatic data collection for creators at configurable frequencies.</p>
+
+      <div class="endpoint" id="track-creator">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method post">POST</span>
+          <span class="endpoint-path">/v1/tracking/creators</span>
+          <span class="endpoint-desc">Start tracking a creator</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Subscribe to automatic data collection for a creator. Supports frequencies: <code>realtime</code>, <code>frequent</code>, <code>standard</code>.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"platform": "instagram", "username": "virat.kohli", "frequency": "standard"}' \
+  "<span class="base-url">http://localhost:8000</span>/v1/tracking/creators"</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="untrack-creator">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method delete">DELETE</span>
+          <span class="endpoint-path">/v1/tracking/creators/{tracking_id}</span>
+          <span class="endpoint-desc">Stop tracking a creator</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Unsubscribe from tracking. The creator data remains in the database.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -X DELETE -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/tracking/creators/{tracking_id}"</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--  WEBHOOKS                                   -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="section" id="webhooks-section">
+      <h2>Webhooks</h2>
+      <p>Register endpoints to receive real-time notifications when tracked creator data changes.</p>
+
+      <div class="endpoint" id="create-webhook">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method post">POST</span>
+          <span class="endpoint-path">/v1/webhooks</span>
+          <span class="endpoint-desc">Register a webhook</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Register a URL to receive webhook notifications. Events: <code>creator.updated</code>, <code>post.new</code>, <code>metrics.changed</code>.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://your-server.com/webhook", "events": ["creator.updated", "post.new"]}' \
+  "<span class="base-url">http://localhost:8000</span>/v1/webhooks"</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="delete-webhook">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="endpoint-method delete">DELETE</span>
+          <span class="endpoint-path">/v1/webhooks/{webhook_id}</span>
+          <span class="endpoint-desc">Delete a webhook</span>
+          <span class="endpoint-chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-content">
+            <p>Remove a registered webhook endpoint.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <pre>curl -X DELETE -H "Authorization: Bearer YOUR_API_KEY" \
+  "<span class="base-url">http://localhost:8000</span>/v1/webhooks/{webhook_id}"</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .content -->
+</div><!-- .main -->
+
+<script>
+  // ─── Base URL detection ───
+  const BASE = window.location.origin;
+  document.getElementById('baseUrl').textContent = BASE;
+  document.querySelectorAll('.base-url').forEach(el => el.textContent = BASE);
+
+  // ─── API Key persistence ───
+  const keyInput = document.getElementById('apiKeyInput');
+  const saved = localStorage.getItem('crawler_api_key');
+  if (saved) { keyInput.value = saved; testAuth(); }
+  keyInput.addEventListener('input', () => localStorage.setItem('crawler_api_key', keyInput.value));
+
+  function getApiKey() { return keyInput.value.trim(); }
+
+  function toggleKeyVisibility() {
+    const btn = document.getElementById('toggleKeyBtn');
+    if (keyInput.type === 'password') { keyInput.type = 'text'; btn.textContent = 'Hide'; }
+    else { keyInput.type = 'password'; btn.textContent = 'Show'; }
+  }
+
+  async function testAuth() {
+    const key = getApiKey();
+    const el = document.getElementById('authStatus');
+    if (!key) { el.innerHTML = '<span class="auth-dot no"></span><span style="color:var(--text-muted)">No key</span>'; return; }
+    try {
+      const r = await fetch(BASE + '/v1/creators/lookup?platform=instagram&username=__test__', { headers: { 'Authorization': 'Bearer ' + key } });
+      if (r.status === 401) {
+        el.innerHTML = '<span class="auth-dot no"></span><span style="color:var(--red)">Invalid key</span>';
+      } else {
+        localStorage.setItem('crawler_api_key', key);
+        el.innerHTML = '<span class="auth-dot ok"></span><span style="color:var(--green)">Authenticated</span>';
+      }
+    } catch(e) {
+      el.innerHTML = '<span class="auth-dot no"></span><span style="color:var(--orange)">Server unreachable</span>';
+    }
+  }
+
+  // ─── Sidebar active state ───
+  const navItems = document.querySelectorAll('.nav-item');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navItems.forEach(n => n.classList.remove('active'));
+        const link = document.querySelector(`.nav-item[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  document.querySelectorAll('.section, .endpoint').forEach(s => observer.observe(s));
+
+  // ─── Endpoint toggle ───
+  function toggleEndpoint(header) {
+    header.parentElement.classList.toggle('open');
+  }
+
+  // ─── Send API request ───
+  async function sendRequest(btn, method, pathTemplate) {
+    const key = getApiKey();
+    if (!key) { alert('Enter your API key in the top bar first'); return; }
+
+    const card = btn.closest('.endpoint-content');
+    const inputs = card.querySelectorAll('[data-param]');
+    const panel = card.querySelector('.response-panel');
+
+    // Build URL
+    let path = pathTemplate;
+    const params = new URLSearchParams();
+    inputs.forEach(input => {
+      const val = input.value.trim();
+      if (!val) return;
+      if (input.dataset.path) {
+        path = path.replace('{' + input.dataset.param + '}', encodeURIComponent(val));
+      } else {
+        params.set(input.dataset.param, val);
+      }
+    });
+
+    const qs = params.toString();
+    const url = BASE + path + (qs ? '?' + qs : '');
+
+    // Show loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Sending...';
+    panel.style.display = 'block';
+    panel.innerHTML = '<div style="padding:16px;color:var(--text-muted)"><span class="spinner"></span> Loading...</div>';
+
+    const start = performance.now();
+    try {
+      const r = await fetch(url, { method, headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' } });
+      const elapsed = Math.round(performance.now() - start);
+      const body = await r.text();
+
+      let formatted;
+      try { formatted = syntaxHighlight(JSON.stringify(JSON.parse(body), null, 2)); }
+      catch { formatted = escapeHtml(body); }
+
+      const statusClass = r.status < 300 ? 's2xx' : r.status < 500 ? 's4xx' : 's5xx';
+
+      panel.innerHTML = `
+        <div class="response-header">
+          <span class="response-status ${statusClass}">${r.status} ${r.statusText}</span>
+          <span class="response-time">${elapsed}ms</span>
+          <button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:11px" onclick="copyResponse(this)">Copy</button>
+        </div>
+        <div class="response-body"><pre>${formatted}</pre></div>
+      `;
+      panel._rawJson = body;
+    } catch(e) {
+      panel.innerHTML = `<div style="padding:16px;color:var(--red)">Error: ${escapeHtml(e.message)}</div>`;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send Request';
+  }
+
+  function copyResponse(btn) {
+    const panel = btn.closest('.response-panel');
+    const text = panel._rawJson || panel.querySelector('pre')?.textContent || '';
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+
+  // ─── JSON syntax highlighting ───
+  function syntaxHighlight(json) {
+    json = escapeHtml(json);
+    return json.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let cls = 'json-num';
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? 'json-key' : 'json-str';
+        } else if (/true|false/.test(match)) {
+          cls = 'json-bool';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      }
+    );
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── Copy code blocks ───
+  function copyCode(btn) {
+    const pre = btn.parentElement.querySelector('pre');
+    navigator.clipboard.writeText(pre.textContent);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,912 @@
+openapi: "3.0.3"
+info:
+  title: Crawler.io API
+  description: Unified Social Media Data API — one integration, all platforms.
+  version: "1.0.0"
+  contact:
+    email: api@crawler.io
+    url: https://docs.crawler.io
+
+servers:
+  - url: https://api.crawler.io/v1
+    description: Production
+  - url: https://sandbox.crawler.io/v1
+    description: Sandbox (mock data)
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Creators
+    description: Creator/profile operations
+  - name: Posts
+    description: Post/content operations
+  - name: Tracking
+    description: Real-time tracking subscriptions
+  - name: Webhooks
+    description: Webhook management
+  - name: Trends
+    description: Trending data and discovery
+
+paths:
+
+  # ─── CREATORS ───────────────────────────────
+
+  /creators/lookup:
+    get:
+      tags: [Creators]
+      summary: Lookup creator by platform username
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [instagram, tiktok, youtube]
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Creator"
+              example:
+                id: "cr_a1b2c3d4e5"
+                platform: "instagram"
+                platform_id: "12345678"
+                username: "johndoe"
+                display_name: "John Doe"
+                bio: "Travel photographer | NYC"
+                is_verified: true
+                follower_count: 1250000
+                following_count: 843
+                post_count: 2341
+                engagement_rate: 3.42
+                data_freshness: "live"
+                last_updated_at: "2026-03-31T14:22:10Z"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /creators/{creator_id}:
+    get:
+      tags: [Creators]
+      summary: Get creator by internal ID
+      parameters:
+        - name: creator_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^cr_[a-z0-9]+$"
+      responses:
+        "200":
+          description: Creator details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Creator"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /creators/search:
+    get:
+      tags: [Creators]
+      summary: Search creators
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Free-text search across username, display name, bio
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [instagram, tiktok, youtube]
+        - name: min_followers
+          in: query
+          schema:
+            type: integer
+        - name: max_followers
+          in: query
+          schema:
+            type: integer
+        - name: verified
+          in: query
+          schema:
+            type: boolean
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedCreators"
+
+  /creators/{creator_id}/metrics:
+    get:
+      tags: [Creators]
+      summary: Get creator metrics history
+      parameters:
+        - name: creator_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [hourly, daily, weekly]
+            default: daily
+      responses:
+        "200":
+          description: Metrics time series
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  creator_id:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                        followers:
+                          type: integer
+                        engagement_rate:
+                          type: number
+
+  /creators/bulk-lookup:
+    post:
+      tags: [Creators]
+      summary: Bulk lookup creators (up to 100)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lookups:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [platform, username]
+                    properties:
+                      platform:
+                        type: string
+                        enum: [instagram, tiktok, youtube]
+                      username:
+                        type: string
+      responses:
+        "200":
+          description: Bulk results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        platform:
+                          type: string
+                        username:
+                          type: string
+                        creator:
+                          $ref: "#/components/schemas/Creator"
+                        error:
+                          type: string
+
+  # ─── POSTS ──────────────────────────────────
+
+  /creators/{creator_id}/posts:
+    get:
+      tags: [Posts]
+      summary: Get posts by creator
+      parameters:
+        - name: creator_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [image, carousel, video, reel, short, story, live]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: ["-published_at", "published_at", "-like_count", "-view_count"]
+            default: "-published_at"
+        - name: published_after
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: published_before
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          description: Creator's posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPosts"
+
+  /posts/{post_id}:
+    get:
+      tags: [Posts]
+      summary: Get single post by ID
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^po_[a-z0-9]+$"
+      responses:
+        "200":
+          description: Post details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /posts/search:
+    get:
+      tags: [Posts]
+      summary: Search posts
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Keyword search in post text
+        - name: hashtag
+          in: query
+          schema:
+            type: string
+          description: Filter by hashtag (without #)
+        - name: platform
+          in: query
+          schema:
+            type: string
+          description: Comma-separated platforms
+        - name: min_likes
+          in: query
+          schema:
+            type: integer
+        - name: min_views
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [image, carousel, video, reel, short, story, live]
+        - name: published_after
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: published_before
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: ["-published_at", "-like_count", "-view_count", "relevance"]
+            default: "relevance"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPosts"
+
+  /posts/{post_id}/metrics:
+    get:
+      tags: [Posts]
+      summary: Get post metrics history
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [5m, 15m, hourly, daily]
+            default: hourly
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Metrics time series
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post_id:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MetricsSnapshot"
+
+  # ─── TRACKING ───────────────────────────────
+
+  /tracking/creators:
+    post:
+      tags: [Tracking]
+      summary: Start tracking a creator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform, username]
+              properties:
+                platform:
+                  type: string
+                  enum: [instagram, tiktok, youtube]
+                username:
+                  type: string
+                frequency:
+                  type: string
+                  enum: [realtime, frequent, standard]
+                  default: standard
+                  description: "realtime=30s, frequent=5min, standard=1h"
+            example:
+              platform: "instagram"
+              username: "johndoe"
+              frequency: "realtime"
+      responses:
+        "201":
+          description: Tracking started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  creator_id:
+                    type: string
+                  status:
+                    type: string
+                  frequency:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+    get:
+      tags: [Tracking]
+      summary: List tracked creators
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, all]
+            default: active
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Tracked creators list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /tracking/creators/{tracking_id}:
+    delete:
+      tags: [Tracking]
+      summary: Stop tracking a creator
+      parameters:
+        - name: tracking_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tracking stopped
+
+  # ─── WEBHOOKS ───────────────────────────────
+
+  /webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Register a webhook endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - post.created
+                      - post.updated
+                      - metrics.updated
+                      - creator.updated
+                      - creator.new_post
+                filters:
+                  type: object
+                  properties:
+                    creator_ids:
+                      type: array
+                      items:
+                        type: string
+                    platforms:
+                      type: array
+                      items:
+                        type: string
+                secret:
+                  type: string
+                  description: Secret for HMAC signature verification
+      responses:
+        "201":
+          description: Webhook registered
+    get:
+      tags: [Webhooks]
+      summary: List registered webhooks
+      responses:
+        "200":
+          description: Webhook list
+
+  /webhooks/{webhook_id}:
+    delete:
+      tags: [Webhooks]
+      summary: Delete a webhook
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Webhook deleted
+
+  # ─── TRENDS ─────────────────────────────────
+
+  /trends/hashtags:
+    get:
+      tags: [Trends]
+      summary: Get trending hashtags
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [instagram, tiktok, youtube]
+        - name: country
+          in: query
+          schema:
+            type: string
+            description: ISO 3166-1 alpha-2 country code
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 24h
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        "200":
+          description: Trending hashtags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        hashtag:
+                          type: string
+                        post_count:
+                          type: integer
+                        growth_rate:
+                          type: number
+                          description: "% growth vs previous period"
+                        top_posts:
+                          type: array
+                          items:
+                            type: string
+                          description: Post IDs of top performing posts
+
+  /trends/creators:
+    get:
+      tags: [Trends]
+      summary: Get trending creators by growth
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [follower_growth, engagement_rate, post_frequency]
+            default: follower_growth
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [24h, 7d, 30d]
+            default: 7d
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Trending creators
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        API key authentication. Pass your key as a Bearer token.
+        Production keys: sk_live_*
+        Sandbox keys: sk_test_*
+
+  schemas:
+
+    Creator:
+      type: object
+      properties:
+        id:
+          type: string
+        platform:
+          type: string
+        platform_id:
+          type: string
+        username:
+          type: string
+        display_name:
+          type: string
+        bio:
+          type: string
+        profile_image_url:
+          type: string
+        is_verified:
+          type: boolean
+        follower_count:
+          type: integer
+        following_count:
+          type: integer
+        post_count:
+          type: integer
+        engagement_rate:
+          type: number
+        categories:
+          type: array
+          items:
+            type: string
+        external_urls:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              url:
+                type: string
+        first_seen_at:
+          type: string
+          format: date-time
+        last_updated_at:
+          type: string
+          format: date-time
+        data_freshness:
+          type: string
+          enum: [live, recent, stale]
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+        creator_id:
+          type: string
+        platform:
+          type: string
+        platform_post_id:
+          type: string
+        type:
+          type: string
+        content:
+          type: object
+          properties:
+            text:
+              type: string
+            hashtags:
+              type: array
+              items:
+                type: string
+            mentions:
+              type: array
+              items:
+                type: string
+            media:
+              type: array
+              items:
+                $ref: "#/components/schemas/Media"
+        metrics:
+          $ref: "#/components/schemas/PostMetrics"
+        published_at:
+          type: string
+          format: date-time
+        collected_at:
+          type: string
+          format: date-time
+        metrics_updated_at:
+          type: string
+          format: date-time
+
+    Media:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [image, video]
+        url:
+          type: string
+        thumbnail_url:
+          type: string
+        duration_seconds:
+          type: number
+        width:
+          type: integer
+        height:
+          type: integer
+
+    PostMetrics:
+      type: object
+      properties:
+        like_count:
+          type: integer
+        comment_count:
+          type: integer
+        share_count:
+          type: integer
+        view_count:
+          type: integer
+        save_count:
+          type: integer
+        engagement_rate:
+          type: number
+
+    MetricsSnapshot:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        like_count:
+          type: integer
+        comment_count:
+          type: integer
+        share_count:
+          type: integer
+        view_count:
+          type: integer
+        save_count:
+          type: integer
+
+    Pagination:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+        total_count:
+          type: integer
+
+    PaginatedCreators:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Creator"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    PaginatedPosts:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            status:
+              type: integer
+            retry_after:
+              type: integer
+        request_id:
+          type: string
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: "not_found"
+              message: "Creator not found"
+              status: 404
+            request_id: "req_abc123"
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: "rate_limit_exceeded"
+              message: "You have exceeded your rate limit"
+              status: 429
+              retry_after: 32
+            request_id: "req_abc123"

@@ -1,0 +1,288 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+
+    "Creator": {
+      "type": "object",
+      "description": "Unified creator/profile entity across all platforms",
+      "required": ["id", "platform", "platform_id", "username", "last_updated_at"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^cr_[a-z0-9]+$",
+          "description": "Internal unique ID (cr_xxxxx)"
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["instagram", "tiktok", "youtube"]
+        },
+        "platform_id": {
+          "type": "string",
+          "description": "Platform-native user ID"
+        },
+        "username": {
+          "type": "string",
+          "description": "Platform handle/username"
+        },
+        "display_name": {
+          "type": ["string", "null"]
+        },
+        "bio": {
+          "type": ["string", "null"]
+        },
+        "profile_image_url": {
+          "type": ["string", "null"],
+          "format": "uri"
+        },
+        "is_verified": {
+          "type": "boolean",
+          "default": false
+        },
+        "follower_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "following_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "post_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "engagement_rate": {
+          "type": ["number", "null"],
+          "description": "Avg engagement rate as percentage (e.g., 3.42 = 3.42%)"
+        },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "external_urls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        },
+        "first_seen_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data_freshness": {
+          "type": "string",
+          "enum": ["live", "recent", "stale"],
+          "description": "live=<5min, recent=<1h, stale=>1h"
+        }
+      }
+    },
+
+    "Post": {
+      "type": "object",
+      "description": "Unified post entity (reels, videos, shorts, images, stories)",
+      "required": ["id", "creator_id", "platform", "platform_post_id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^po_[a-z0-9]+$"
+        },
+        "creator_id": {
+          "type": "string",
+          "pattern": "^cr_[a-z0-9]+$"
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["instagram", "tiktok", "youtube"]
+        },
+        "platform_post_id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["image", "carousel", "video", "reel", "short", "story", "live"]
+        },
+        "content": {
+          "type": "object",
+          "properties": {
+            "text": { "type": ["string", "null"] },
+            "hashtags": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "mentions": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "media": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Media" }
+            }
+          }
+        },
+        "metrics": { "$ref": "#/definitions/PostMetrics" },
+        "published_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "collected_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "metrics_updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+
+    "Media": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["image", "video"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "thumbnail_url": {
+          "type": ["string", "null"],
+          "format": "uri"
+        },
+        "duration_seconds": {
+          "type": ["number", "null"]
+        },
+        "width": {
+          "type": ["integer", "null"]
+        },
+        "height": {
+          "type": ["integer", "null"]
+        }
+      }
+    },
+
+    "PostMetrics": {
+      "type": "object",
+      "properties": {
+        "like_count": { "type": "integer", "minimum": 0 },
+        "comment_count": { "type": "integer", "minimum": 0 },
+        "share_count": { "type": ["integer", "null"], "minimum": 0 },
+        "view_count": { "type": ["integer", "null"], "minimum": 0 },
+        "save_count": { "type": ["integer", "null"], "minimum": 0 },
+        "engagement_rate": { "type": ["number", "null"] }
+      }
+    },
+
+    "MetricsSnapshot": {
+      "type": "object",
+      "description": "Point-in-time metrics capture for time-series tracking",
+      "required": ["post_id", "timestamp", "metrics"],
+      "properties": {
+        "post_id": {
+          "type": "string",
+          "pattern": "^po_[a-z0-9]+$"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "metrics": { "$ref": "#/definitions/PostMetrics" },
+        "deltas": {
+          "type": "object",
+          "description": "Change since last snapshot",
+          "properties": {
+            "like_count": { "type": "integer" },
+            "comment_count": { "type": "integer" },
+            "share_count": { "type": ["integer", "null"] },
+            "view_count": { "type": ["integer", "null"] },
+            "save_count": { "type": ["integer", "null"] }
+          }
+        },
+        "interval": {
+          "type": "string",
+          "enum": ["5m", "15m", "1h", "6h", "1d"]
+        }
+      }
+    },
+
+    "WebhookEvent": {
+      "type": "object",
+      "required": ["event", "timestamp", "data"],
+      "properties": {
+        "event": {
+          "type": "string",
+          "enum": [
+            "post.created",
+            "post.updated",
+            "metrics.updated",
+            "creator.updated",
+            "creator.new_post"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "description": "Event payload - either a Creator or Post object"
+        }
+      }
+    },
+
+    "APIError": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message", "status"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "invalid_request",
+                "authentication_failed",
+                "insufficient_permissions",
+                "not_found",
+                "rate_limit_exceeded",
+                "internal_error",
+                "platform_unavailable",
+                "stale_data"
+              ]
+            },
+            "message": { "type": "string" },
+            "status": { "type": "integer" },
+            "retry_after": { "type": ["integer", "null"] }
+          }
+        },
+        "request_id": { "type": "string" }
+      }
+    },
+
+    "PaginatedResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array"
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "has_more": { "type": "boolean" },
+            "next_cursor": { "type": ["string", "null"] },
+            "total_count": { "type": ["integer", "null"] }
+          }
+        }
+      }
+    }
+  }
+}

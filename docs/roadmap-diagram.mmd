@@ -1,0 +1,34 @@
+graph LR
+    subgraph Phase1["Phase 1: Fast MVP (Weeks 1-6)"]
+        direction TB
+        P1A["Week 1-2:<br/>Foundation"]
+        P1B["Week 3-4:<br/>Instagram Collector"]
+        P1C["Week 5-6:<br/>API + Launch"]
+        P1A --> P1B --> P1C
+    end
+
+    subgraph Phase2["Phase 2: Expansion (Weeks 7-14)"]
+        direction TB
+        P2A["Week 7-9:<br/>TikTok + YouTube"]
+        P2B["Week 10-11:<br/>Real-Time + Kafka"]
+        P2C["Week 12-14:<br/>Dashboard + SDKs"]
+        P2A --> P2B --> P2C
+    end
+
+    subgraph Phase3["Phase 3: Scale (Weeks 15-26)"]
+        direction TB
+        P3A["Week 15-18:<br/>Go Migration + Scale"]
+        P3B["Week 19-22:<br/>Enterprise Features"]
+        P3C["Week 23-26:<br/>AI + Partnerships"]
+        P3A --> P3B --> P3C
+    end
+
+    Phase1 --> Phase2 --> Phase3
+
+    classDef phase1 fill:#c8e6c9,stroke:#2e7d32
+    classDef phase2 fill:#bbdefb,stroke:#1565c0
+    classDef phase3 fill:#e1bee7,stroke:#7b1fa2
+
+    class P1A,P1B,P1C phase1
+    class P2A,P2B,P2C phase2
+    class P3A,P3B,P3C phase3
