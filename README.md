@@ -6,11 +6,6 @@ Crawler.io provides normalized, near real-time public data from Instagram, TikTo
 
 ## Quick Start
 
-### Prerequisites
-- Python 3.11+
-- Docker & Docker Compose
-- Make
-
 ### Setup
 
 ```bash
